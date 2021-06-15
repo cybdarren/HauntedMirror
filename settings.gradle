@@ -1,0 +1,3 @@
+rootProject.name = "HauntedMirror"
+include ':app'
+include ':openCV'
