@@ -12,14 +12,12 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.MediaController;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -32,7 +30,6 @@ import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.camera.core.impl.ImageAnalysisConfig;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
@@ -86,13 +83,12 @@ public class FullscreenActivity extends AppCompatActivity {
             {Manifest.permission.CAMERA};
     private static final int CAMERA_REQUEST_CODE = 10;
 
-    private static ImageView ocvImage;
-    private static TextView textView;
-    private static VideoView videoView;
-    private static SeekBar seekBar;
+    private ImageView ocvImage;
+    private TextView textView;
+    private VideoView videoView;
 
-    private static int MOTION_MIN = 5;
-    private static int MOTION_THRESHOLD_DEFAULT = 25;
+    private static final int MOTION_MIN = 5;
+    private static final int MOTION_THRESHOLD_DEFAULT = 25;
     private static int motionThreshold = MOTION_THRESHOLD_DEFAULT;
 
     private static SharedPreferences sharedPref;
@@ -220,7 +216,7 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
-        seekBar = findViewById(R.id.seekBar);
+        SeekBar seekBar = findViewById(R.id.seekBar);
         seekBar.setMax(50 - MOTION_MIN);
         seekBar.setProgress(motionThreshold - MOTION_MIN);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -299,7 +295,7 @@ public class FullscreenActivity extends AppCompatActivity {
     }
 
     private class AggregateLumaMotionDetector implements ImageAnalysis.Analyzer {
-        private Mat dilateKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_RECT, new Size(2.0, 2.0));
+        private final Mat dilateKernel = Imgproc.getStructuringElement(Imgproc.CV_SHAPE_RECT, new Size(2.0, 2.0));
         private long lastAnalyzedTimestamp = 0L;
         private Mat previousMat = new Mat();
 
