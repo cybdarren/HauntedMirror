@@ -17,6 +17,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -91,6 +92,11 @@ public class FullscreenActivity extends AppCompatActivity {
     private static final int MOTION_THRESHOLD_DEFAULT = 25;
     private static int motionThreshold = MOTION_THRESHOLD_DEFAULT;
 
+    private Handler movieIdleTimerHandler = new Handler();
+    private static final int MOVIE_IDLE_TIMER_DEFAULT = 0; // value of 0 indicates do not use idle timer
+    private static final int MOVIE_IDLE_TIMER_SCALE = 18000; // 18000ms per step of the timer
+    private static int movieIdleTimer = MOVIE_IDLE_TIMER_DEFAULT;
+
     private static SharedPreferences sharedPref;
 
     private final Runnable mHidePart2Runnable = new Runnable() {
@@ -131,6 +137,28 @@ public class FullscreenActivity extends AppCompatActivity {
             hide();
         }
     };
+
+    /**
+     *  auto play timer runnable. If no motion detect activity is shown for some time then start
+    the movie anyway so that we don't look completely dead */
+    private final Runnable mMovieIdleTimerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            Log.d(TAG, "Movie Idle timer expired");
+            if (movieIdleTimer > 0) {
+                int timerValue = movieIdleTimer * MOVIE_IDLE_TIMER_SCALE;
+
+                // start the player
+                if (!videoView.isPlaying()) {
+                    videoView.start();
+                }
+
+                Log.d(TAG, "Started idle timer with delay: " + Integer.toString(timerValue));
+                movieIdleTimerHandler.postDelayed(this, timerValue);
+            }
+        }
+    };
+
     /**
      * Touch listener to use for in-layout UI controls to delay hiding the
      * system UI. This is to prevent the jarring behavior of controls going away
@@ -171,6 +199,10 @@ public class FullscreenActivity extends AppCompatActivity {
         // shared preferences
         sharedPref = getPreferences(Context.MODE_PRIVATE);
         motionThreshold = sharedPref.getInt(getString(R.string.motion_threshold_key), MOTION_THRESHOLD_DEFAULT);
+        Log.d(TAG, "Motion threshold set to: " + Integer.toString(motionThreshold));
+        movieIdleTimer = sharedPref.getInt(getString(R.string.movie_idle_timer_key), MOVIE_IDLE_TIMER_DEFAULT);
+        int timerValue  = movieIdleTimer * MOVIE_IDLE_TIMER_SCALE; // convert to ms
+        Log.d(TAG, "Started idle timer with delay: " + Integer.toString(timerValue));
 
         /////////////////////////////////////////////////////////////
         // set the screen brightness to maximum
@@ -216,25 +248,64 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
-        SeekBar seekBar = findViewById(R.id.seekBar);
-        seekBar.setMax(50 - MOTION_MIN);
-        seekBar.setProgress(motionThreshold - MOTION_MIN);
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        // setup the motion detect threshold seekbar
+        SeekBar seekBarMotionThreshold = findViewById(R.id.seekBarMotionThreshold);
+        seekBarMotionThreshold.setMax(100);
+        seekBarMotionThreshold.setProgress(motionThreshold);
+        seekBarMotionThreshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                motionThreshold = seekBar.getProgress() + MOTION_MIN;
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                // write to the shared preferences
+                motionThreshold = seekBar.getProgress();
+                if (motionThreshold < MOTION_MIN) {
+                    motionThreshold = MOTION_MIN;
+                }
+                Log.d(TAG, "Motion threshold set to: " + Integer.toString(motionThreshold));
+            }
+        });
+
+        // setup the idle timer seekbar
+        SeekBar seekBarMovieIdleTimer = findViewById(R.id.seekBarMovieIdleTimer);
+        seekBarMovieIdleTimer.setMax(10); // 10 steps on the seekbar
+        seekBarMovieIdleTimer.setProgress(movieIdleTimer);
+        seekBarMovieIdleTimer.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             }
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
+                // disable the timer when we start changing the value
+                movieIdleTimerHandler.removeCallbacks(mMovieIdleTimerRunnable);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                // write to the shared preferences
-                motionThreshold = seekBar.getProgress() + MOTION_MIN;
+                // restart the timer if a valid value
+                movieIdleTimer = seekBar.getProgress();
+                if (movieIdleTimer > 0) {
+                    int timerValue  = movieIdleTimer * MOVIE_IDLE_TIMER_SCALE; // convert to ms
+                    Log.d(TAG, "Started idle timer with delay: " + Integer.toString(timerValue));
+                    movieIdleTimerHandler.postDelayed(mMovieIdleTimerRunnable, timerValue);
+                }
+            }
+        });
+
+        Button commit_button = findViewById(R.id.dummy_button);
+        commit_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // commit the settings to the preferences
+                Log.d(TAG, "Saving preferences");
                 SharedPreferences.Editor editor = sharedPref.edit();
                 editor.putInt(getString(R.string.motion_threshold_key), motionThreshold);
+                editor.putInt(getString(R.string.movie_idle_timer_key), movieIdleTimer);
                 editor.apply();
             }
         });
@@ -370,7 +441,7 @@ public class FullscreenActivity extends AppCompatActivity {
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
-        delayedHide(100);
+        delayedHide(200);
     }
 
     private void toggle() {
