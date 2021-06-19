@@ -201,8 +201,11 @@ public class FullscreenActivity extends AppCompatActivity {
         motionThreshold = sharedPref.getInt(getString(R.string.motion_threshold_key), MOTION_THRESHOLD_DEFAULT);
         Log.d(TAG, "Motion threshold set to: " + Integer.toString(motionThreshold));
         movieIdleTimer = sharedPref.getInt(getString(R.string.movie_idle_timer_key), MOVIE_IDLE_TIMER_DEFAULT);
-        int timerValue  = movieIdleTimer * MOVIE_IDLE_TIMER_SCALE; // convert to ms
-        Log.d(TAG, "Started idle timer with delay: " + Integer.toString(timerValue));
+        if (movieIdleTimer > 0) {
+            int timerValue  = movieIdleTimer * MOVIE_IDLE_TIMER_SCALE; // convert to ms
+            Log.d(TAG, "Started idle timer with delay: " + Integer.toString(timerValue));
+            movieIdleTimerHandler.postDelayed(mMovieIdleTimerRunnable, timerValue);
+        }
 
         /////////////////////////////////////////////////////////////
         // set the screen brightness to maximum
