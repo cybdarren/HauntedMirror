@@ -4,4 +4,8 @@
     <string name="dummy_content"> </string>
     <string name="motion_threshold_key">MOTION_THRESHOLD</string>
     <string name="movie_idle_timer_key">0</string>
+    <string name="motion_sensitivity_key">MOTION_SENSITIVITY</string>
+    <string name="motion_sensitivity">Motion Sensitivity</string>
+    <string name="motion_threshold">Motion Threshold</string>
+    <string name="idle_timer">Idle Timer</string>
 </resources>
